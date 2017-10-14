@@ -32,8 +32,13 @@ public class Main {
         }
         String server = leftoverArgs[0];
         String name = leftoverArgs[1];
-        
+        byte[] dnsQuestion = DnsManager.getDnsQuestion(name, mailServer, nameServer);
+        /*for(int i=0; i<b.length; i++){
+        	String s1 = String.format("%8s", Integer.toBinaryString(b[i] & 0xFF)).replace(' ', '0');
+        	System.out.println(s1);
+        }*/
         System.out.print(timeout + " " + nameServer + " " + mailServer + " " + server + " " + name);
+	
 	}
 	
 	private static Options getOptions(){
