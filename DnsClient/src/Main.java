@@ -32,12 +32,22 @@ public class Main {
         }
         String server = leftoverArgs[0];
         String name = leftoverArgs[1];
+        
+        //Print request
+        System.out.println(String.format("DnsClient sending request for %s", name));
+        System.out.println(String.format("Server: %s", server));
+        String requestType = "A";
+        if(mailServer || nameServer){
+        	requestType = mailServer ? "MX" : "NS";
+        }
+        System.out.println(String.format("Request type: %s", requestType));
+        
         byte[] dnsQuestion = DnsManager.getDnsQuestion(name, mailServer, nameServer);
         /*for(int i=0; i<b.length; i++){
         	String s1 = String.format("%8s", Integer.toBinaryString(b[i] & 0xFF)).replace(' ', '0');
         	System.out.println(s1);
         }*/
-        System.out.print(timeout + " " + nameServer + " " + mailServer + " " + server + " " + name);
+        //System.out.print(timeout + " " + nameServer + " " + mailServer + " " + server + " " + name);
 	
 	}
 	

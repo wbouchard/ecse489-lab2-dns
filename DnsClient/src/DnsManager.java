@@ -2,6 +2,8 @@ import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
 import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class DnsManager {
 	//final static String regex = "(\\|\\t[0-9]*\\t)\\|\\|?(\\t[0-9]*\\t)?\\|";
@@ -32,6 +34,11 @@ public class DnsManager {
 		 type_MX {
 		      public String toString() {
 		    	  return "0000000000001111";
+		      }
+		 },
+		 type_CNAME {
+		      public String toString() {
+		    	  return "0000000000000101";
 		      }
 		 }
 	}
@@ -65,10 +72,75 @@ public class DnsManager {
     	//System.out.println(s1);
 	}
 	
+	private static String bytesToStr(byte[] bs){
+		String bytes = "";
+		for(byte b : bs){
+			bytes += String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
+		}
+		return bytes;
+	}
+	
+	public static void readDnsAnswer(byte[] answer){
+		ByteBuffer dnsBuffer = ByteBuffer.allocate(answer.length);
+		dnsBuffer.put(answer);
+		byte[] currentBytes = new byte[2];
+		int currentByteCount = 15;
+		//stop writing, now read
+		dnsBuffer.flip();
+		//Read names
+		//Qtype
+		dnsBuffer.get(currentBytes, 0, currentBytes.length);
+		String Qtype = bytesToStr(currentBytes);
+		//QClass
+		dnsBuffer.get(currentBytes, 0, currentBytes.length);
+		String QClass = bytesToStr(currentBytes);
+		//TTL
+		currentBytes = new byte[4];
+		dnsBuffer.get(currentBytes, 0, currentBytes.length);
+		long TTL = getIntFromBytes(currentBytes);
+		//RDLength
+		currentBytes = new byte[2];
+		dnsBuffer.get(currentBytes, 0, currentBytes.length);
+		long rdlLength = getIntFromBytes(currentBytes);
+		//RData
+		String rData = getRData(dnsBuffer, Qtype);
+	}
+	
+	public static long getIntFromBytes(byte[] b){
+		long unsignedInt = 0;
+	    for (int i = 0; i < b.length; i++) {
+	    	unsignedInt += b[i] << 8 * (b.length - 1 - i);
+	    }
+	    return unsignedInt;
+	}
+	
+	private static String getRData(ByteBuffer dnsBuffer, String qType) {
+		byte[] currentBytes;
+		String rData = "";
+		if(qType.equals(QType.type_A.toString())){
+			currentBytes = new byte[4];
+			dnsBuffer.get(currentBytes, 0, currentBytes.length);
+			rData = bytesToStr(currentBytes);
+			rData = rData.replaceAll("(.{4})", "$1.");
+			//remove last period
+			rData = rData.substring(0, rData.length()-1);
+		} else if(qType.equals(QType.type_CNAME.toString())){
+			//get
+		} else if(qType.equals(QType.type_MX.toString())){
+			currentBytes = new byte[2];
+			dnsBuffer.get(currentBytes, 0, currentBytes.length);
+			long preference = getIntFromBytes(currentBytes);
+			//get QNAME
+		} else if(qType.equals(QType.type_NS.toString())){
+			
+		}
+		return rData;
+	}
+
 	public static byte[] getDnsQuestion(String domain, boolean mailServer, boolean nameServer){
 		ByteBuffer dnsBuffer = ByteBuffer.allocate(1024);
-		int currentByteCount = 15;
 		dnsBuffer.clear();
+		int currentByteCount = 15;
 		SecureRandom sr = new SecureRandom();
 		byte[] rndId = new byte[2];
 		sr.nextBytes(rndId);
