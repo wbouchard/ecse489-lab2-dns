@@ -1,5 +1,7 @@
 import java.net.DatagramPacket;
 import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.Charset;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.regex.Matcher;
@@ -20,7 +22,7 @@ public class DnsManager {
 		 }
 	}
 	
-	private enum QType{
+	public enum QType{
 		type_A {
 		      public String toString() {
 		          return "0000000000000001";
@@ -83,10 +85,10 @@ public class DnsManager {
 	public static void readDnsAnswer(byte[] answer){
 		ByteBuffer dnsBuffer = ByteBuffer.allocate(answer.length);
 		dnsBuffer.put(answer);
-		byte[] currentBytes = new byte[2];
-		int currentByteCount = 15;
 		//stop writing, now read
 		dnsBuffer.flip();
+		byte[] currentBytes = new byte[2];
+		int currentByteCount = 15;
 		//Read names
 		//Qtype
 		dnsBuffer.get(currentBytes, 0, currentBytes.length);
@@ -125,16 +127,23 @@ public class DnsManager {
 			//remove last period
 			rData = rData.substring(0, rData.length()-1);
 		} else if(qType.equals(QType.type_CNAME.toString())){
-			//get
+			//get name from bytes
 		} else if(qType.equals(QType.type_MX.toString())){
 			currentBytes = new byte[2];
 			dnsBuffer.get(currentBytes, 0, currentBytes.length);
 			long preference = getIntFromBytes(currentBytes);
 			//get QNAME
+			currentBytes = new byte[dnsBuffer.remaining()];
+			dnsBuffer.get(currentBytes, 0, currentBytes.length);
+			String qName = getQnameFromBytes(currentBytes);
 		} else if(qType.equals(QType.type_NS.toString())){
 			
 		}
 		return rData;
+	}
+
+	public static String getQnameFromBytes(byte[] currentBytes) {
+		return new String(currentBytes);
 	}
 
 	public static byte[] getDnsQuestion(String domain, boolean mailServer, boolean nameServer){
@@ -197,7 +206,7 @@ public class DnsManager {
 		dnsBuffer.put(currentBytes);
 		currentBytes = new byte[2];
 		//Qname
-		dnsBuffer.put(getQname(domain));
+		dnsBuffer.put(getQnameBytes(domain));
 		//Qtype
 		if(mailServer){
 			dnsBuffer.put(getBytesBinaryStr(QType.type_MX.toString(), 16));
@@ -224,12 +233,13 @@ public class DnsManager {
 		return String.format("|\t\t%s\t\t|\n%s", field, FULL);
 	}
 	
-	private static byte[] getQname(String domain){
+	public static byte[] getQnameBytes(String domain){
 		domain = convertDomain(domain);
 		byte Qname[] = new byte[domain.length()];
 		for(int i=0; i<domain.length(); i++){
-			char c = domain.charAt(i);
-			Qname[i] = getBytesBinaryStr(getAscii(c), BYTE_SIZE)[0];
+			Qname[i] = (byte) domain.charAt(i);
+			//char c = domain.charAt(i);
+			//Qname[i] = getBytesBinaryStr(getAscii(c), BYTE_SIZE)[0];
 		}
 		return Qname;
 		/*String Qname = FULL;
@@ -254,7 +264,7 @@ public class DnsManager {
 		return Qname;*/
 	}
 	
-	private static byte[] getBytesBinaryStr(String Qname, int length) {
+	public static byte[] getBytesBinaryStr(String Qname, int length) {
 		//short binShort = Short.parseShort(Qname, 2);
 		int numberOfBytes = length % 8 == 0 ? length/8 : length/8 + 1;
 		byte bytes[] = new byte[numberOfBytes];
@@ -287,6 +297,7 @@ public class DnsManager {
 
 
 	private static String getAscii(char c){
+		//return (""+c).getBytes(Charset.forName("UTF-8"));
 		return String.format("%08d", Integer.parseInt(Integer.toBinaryString((int) c)));
 	}
 	
