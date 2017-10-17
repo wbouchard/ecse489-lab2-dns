@@ -331,19 +331,6 @@ public class DnsManager {
 		//QClass
 		dnsBuffer.put(getBytesBinaryStr(QClass.internetAddr.toString(), 16));
 		return Arrays.copyOfRange(dnsBuffer.array(), 0, dnsBuffer.position());
-		/*dnsQuestion += addField(id.toString());
-		dnsQuestion += getQname(domain);
-		if(mailServer){
-			dnsQuestion += addField(QType.type_MX.toString());
-		} else if(nameServer){
-			dnsQuestion += addField(QType.type_NS.toString());
-		}
-		dnsQuestion += addField(QClass.internetAddr.toString());
-		System.out.println(dnsQuestion);*/
-	}
-	
-	private static String addField(String field){
-		return String.format("|\t\t%s\t\t|\n%s", field, FULL);
 	}
 	
 	public static byte[] getQnameBytes(String domain){
@@ -356,32 +343,10 @@ public class DnsManager {
 			} else {
 				Qname[i] = (byte) domain.charAt(i);
 			}
-			//char c = domain.charAt(i);
-			//Qname[i] = getBytesBinaryStr(getAscii(c), BYTE_SIZE)[0];
 		}
 		//Signal end of domain
 		Qname[Qname.length-1] = 0;
 		return Qname;
-		/*String Qname = FULL;
-		Qname += "|";
-		boolean second = false;
-		for(int i=0; i<domain.length(); i++){
-			char c = domain.charAt(i);
-			Qname += addCharQname(c);
-			if(second && i != domain.length()-1){
-				Qname += "\n" + FULL + "|";
-			}
-			second = !second;
-		}
-		if(!second){
-			Qname += "\n" + FULL;
-		}
-		if(domain.length() % 2 != 0){
-			Qname += "\t\t\t|";
-			Qname += "\n" + FULL;
-		}
-		//System.out.println(Qname);
-		return Qname;*/
 	}
 	
 	public static byte[] getBytesBinaryStr(String Qname, int length) {
@@ -397,14 +362,6 @@ public class DnsManager {
         bytes = new byte[bf.position()];
         bf.flip();
         bf.get(bytes, 0, bytes.length);
-		
-		//short binShort = Short.parseShort(Qname, 2);
-		/*int numberOfBytes = length % 8 == 0 ? length/8 : length/8 + 1;
-		byte bytes[] = new byte[numberOfBytes];
-		for(int i=0; i<numberOfBytes; i++){
-			bytes[i] = Byte.parseByte(Qname.substring(i, i+8), 2);
-		}*/
-		//ByteBuffer bytes = ByteBuffer.allocate(numberOfBytes).put(Byte.parseByte(Qname, 2));
 		return bytes;
 	}
 
@@ -425,11 +382,4 @@ public class DnsManager {
 		
 		return converted;
 	}
-
-
-	private static String getAscii(char c){
-		//return (""+c).getBytes(Charset.forName("UTF-8"));
-		return String.format("%08d", Integer.parseInt(Integer.toBinaryString((int) c)));
-	}
-	
 }
