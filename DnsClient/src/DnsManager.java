@@ -12,7 +12,6 @@ public class DnsManager {
 	private static final int FF = 255;
 	private static final int FFFF = 65535;
 	private static final int ZERO = 0;
-	//final static String regex = "(\\|\\t[0-9]*\\t)\\|\\|?(\\t[0-9]*\\t)?\\|";
 	final static String FULL = "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+" + System.lineSeparator();
 	final static String HALF = System.lineSeparator() + "+--+--+--+--+--+--+--+--+"+System.lineSeparator();
 	private static final int BYTE_SIZE = 8;
@@ -66,16 +65,12 @@ public class DnsManager {
 		int byteIndex = ((b.length*BYTE_SIZE - 1) - index) / 8;
 		index = index % BYTE_SIZE;
 		b[byteIndex] = (byte) (b[byteIndex] | (1 << index));
-		//String s1 = String.format("%8s", Integer.toBinaryString(b[byteIndex] & 0xFF)).replace(' ', '0');
-    	//System.out.println(s1);
 	}
 	
 	private static void unsetBit(int index, byte b[]){
 		int byteIndex = ((b.length*BYTE_SIZE - 1) - index) / 8;
 		index = index % BYTE_SIZE;
 		b[byteIndex] = (byte) (b[byteIndex] & ~(1 << index));
-		//String s1 = String.format("%8s", Integer.toBinaryString(b[byteIndex] & 0xFF)).replace(' ', '0');
-    	//System.out.println(s1);
 	}
 	
 	public static String bytesToStr(byte[] bs){
@@ -99,7 +94,7 @@ public class DnsManager {
 		ByteBuffer dnsBuffer = ByteBuffer.allocate(answer.length);
 		byte[] answerCopy = answer;
 		dnsBuffer.put(answer);
-		//stop writing, now read
+		//stop writing, now read header
 		dnsBuffer.flip();
 		byte[] currentBytes = new byte[2];
 		dnsBuffer.get(currentBytes, 0, currentBytes.length);
@@ -131,7 +126,7 @@ public class DnsManager {
 		
 		int currentByteCount = 15;
 		//Read names from question
-		String nameFieldQuestion = getRData(dnsBuffer, QType.type_CNAME.toString(), answerCopy);
+		String nameFieldQuestion = getRData(dnsBuffer, answerCopy);
 		//Qtype
 		dnsBuffer.get(currentBytes, 0, currentBytes.length);
 		String qTypeQuestion = bytesToStr(currentBytes);
@@ -155,7 +150,7 @@ public class DnsManager {
 		currentBytes = new byte[2];
 		dnsBuffer.get(currentBytes, 0, currentBytes.length);
 		long rdlLength = getIntFromBytes(currentBytes);
-		//RData
+		//RData (for MX type the rData is returned as "Preference:Exchange"
 		String rData = getRData(dnsBuffer, qTypeAnswer, answerCopy);
 	}
 	
@@ -236,6 +231,12 @@ public class DnsManager {
 		return rData;
 	}
 	
+	private static String getRData(ByteBuffer dnsBuffer, byte[] answerCopy) {
+		//Default name matching follows the one used for CNAME
+		return getRData(dnsBuffer, QType.type_CNAME.toString(), answerCopy);
+		
+	}
+	
 	private static String getRData(ByteBuffer dnsBuffer, String qType, byte[] answerCopy) {
 		byte[] currentBytes = new byte[2];
 		String rData = "";
@@ -246,7 +247,7 @@ public class DnsManager {
 			rData = rData.replaceAll("(.{4})", "$1.");
 			//remove last period
 			rData = rData.substring(0, rData.length()-1);
-		} else if(qType.equals(QType.type_CNAME.toString())){
+		} else if(qType.equals(QType.type_CNAME.toString()) || qType.equals(QType.type_NS.toString())){
 			rData = getVariableName(dnsBuffer, answerCopy);
 		} else if(qType.equals(QType.type_MX.toString())){
 			currentBytes = new byte[2];
@@ -254,8 +255,6 @@ public class DnsManager {
 			long preference = getIntFromBytes(currentBytes);
 			//get QNAME
 			rData = String.format("%l:%s", preference, getVariableName(dnsBuffer, answerCopy));
-		} else if(qType.equals(QType.type_NS.toString())){
-			rData = getVariableName(dnsBuffer, answerCopy);
 		}
 		return rData;
 	}
