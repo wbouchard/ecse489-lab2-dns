@@ -1,3 +1,6 @@
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+
 import org.apache.commons.cli.*;
 
 public class Main {
@@ -32,6 +35,10 @@ public class Main {
         }
         String server = leftoverArgs[0];
         String name = leftoverArgs[1];
+        String dnsResponse = "1000001001111010100000010000000000000000000000010000000000000001000000000000000000000000000000000000001101110111011101110111011100000110011011010110001101100111011010010110110001101100000000100110001101100001000000000000000000000001000000000000000111000000000011000000000000000001000000000000000100000000000000000000010000010011000000000000010010000100110110001011000110100000";
+        byte[] response = DnsManager.getBytesBinaryStr(dnsResponse, dnsResponse.length());
+        
+        DnsManager.readDnsAnswer(response);
         
         //Print request
         System.out.println(String.format("DnsClient sending request for %s", name));
