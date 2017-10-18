@@ -199,7 +199,7 @@ public class DnsManager {
 		}
 		
 		//read authority no print
-		for(int i=0; i<anCount; i++) {
+		for(int i=0; i<nsCount; i++) {
 			//Read answer record
 			String nameFieldAnswer = getRData(dnsBuffer, QType.type_CNAME.toString(), answerCopy);
 			//Qtype
@@ -289,15 +289,16 @@ public class DnsManager {
 	    return unsignedInt & FFFF;
 	}
 	
-	private static String byteToLetter(byte b) {
+	private static String byteToLetter(byte b, boolean firstChar) {
 		byte letter[] = new byte[1];
 		letter[0] = b;
 		//Is a letter or number, -
 		if((b > 47 && b < 58) || (b > 96 && b < 123) || b == 45) {
 			return new String(letter);
-		} else {
-			return b+"";
+		} else if(b>0 && b<10 && !firstChar){
+			return ".";
 		}
+		return "";
 	}
 	
 	public static boolean isNumeric(String str)
@@ -305,22 +306,23 @@ public class DnsManager {
 	  return str.matches("-?\\d+(\\.\\d+)?");
 	}
 	
-	private static String pointer(byte[] currentBytes, byte[] answerCopy) {
+	private static String pointer(byte[] currentBytes, byte[] answerCopy, boolean strOnlyPtr) {
 		//System.out.println((currentBytes[0] & 63));
 		String rData = "";
+		if(!strOnlyPtr) {
+			rData = ".";
+		}
 		int offset = (currentBytes[0] & 63) * 256 + currentBytes[1];
 		byte b  = answerCopy[offset];
 		offset += 1;
 		//while not the 0 character
 		boolean firstChar = true;
 		while(b != ZERO && offset < answerCopy.length) {
-			String letter = byteToLetter(b);
-			if(isNumeric(letter) && !firstChar) {
-				letter = ".";
-			}
-			if(!firstChar) {
-				rData += letter;
-			}
+			/*if(((b >> 6) & 3) == 3) {
+				byte[] bs = {b, answerCopy[offset]};
+				rData += pointer(bs, answerCopy, false);
+			}*/
+			rData += byteToLetter(b, firstChar);
 			firstChar = false;
 			b = answerCopy[offset];
 			offset += 1;
@@ -338,16 +340,10 @@ public class DnsManager {
 				byte nextByte[] = new byte[1];
 				dnsBuffer.get(nextByte, 0, 1);
 				byte pointer[] = {firstByte[0], nextByte[0]};
-				rData += pointer(pointer, answerCopy);
+				rData += pointer(pointer, answerCopy, rData.isEmpty());
 				return rData;
 			}
-			String letter = byteToLetter(firstByte[0]);
-			if(isNumeric(letter) && !firstChar) {
-				letter = ".";
-			}
-			if(!firstChar) {
-				rData += letter;
-			}
+			rData += byteToLetter(firstByte[0], firstChar);
 			firstChar = false;
 			dnsBuffer.get(firstByte, 0, 1);
 		}
@@ -414,7 +410,7 @@ public class DnsManager {
 			rData = bytesToStrIP(currentBytes);
 			//rData = rData.replaceAll("(.{4})", "$1.");
 			//remove last period
-			rData = rData.substring(0, rData.length()-1);
+			//rData = rData.substring(0, rData.length());
 		} else if(qType.equals(QType.type_CNAME.toString()) || qType.equals(QType.type_NS.toString())){
 			rData = getVariableName(dnsBuffer, answerCopy);
 		} else if(qType.equals(QType.type_MX.toString())){
