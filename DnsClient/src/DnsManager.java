@@ -140,72 +140,142 @@ public class DnsManager {
 		String qClassQuestion = bytesToStr(currentBytes);
 		
 		//Read answer record
-		String nameFieldAnswer = getRData(dnsBuffer, QType.type_CNAME.toString(), answerCopy);
-		//Qtype
-		dnsBuffer.get(currentBytes, 0, currentBytes.length);
-		String qTypeAnswer = bytesToStr(currentBytes);
-		//QClass
-		dnsBuffer.get(currentBytes, 0, currentBytes.length);
-		String qClassAnswer = bytesToStr(currentBytes);
-		//TTL
-		currentBytes = new byte[4];
-		dnsBuffer.get(currentBytes, 0, currentBytes.length);
-		long TTL = getIntFromBytes(currentBytes);
-		//RDLength
-		currentBytes = new byte[2];
-		dnsBuffer.get(currentBytes, 0, currentBytes.length);
-		long rdlLength = getIntFromBytes(currentBytes);
-		//RData (for MX type the rData is returned as "Preference:Exchange"
-		String rData = getRData(dnsBuffer, qTypeAnswer, answerCopy);
+		System.out.println("***Answer section (" + anCount + " records)***");
+		for(int i=0; i<anCount; i++) {
+			//Read answer record
+			String nameFieldAnswer = getRData(dnsBuffer, QType.type_CNAME.toString(), answerCopy);
+			//Qtype
+			dnsBuffer.get(currentBytes, 0, currentBytes.length);
+			String qTypeAnswer = bytesToStr(currentBytes);
+			//QClass
+			dnsBuffer.get(currentBytes, 0, currentBytes.length);
+			String qClassAnswer = bytesToStr(currentBytes);
+			//TTL
+			currentBytes = new byte[4];
+			dnsBuffer.get(currentBytes, 0, currentBytes.length);
+			long TTL = getIntFromBytes(currentBytes);
+			//RDLength
+			currentBytes = new byte[2];
+			dnsBuffer.get(currentBytes, 0, currentBytes.length);
+			long rdlLength = getIntFromBytes(currentBytes);
+			//RData (for MX type the rData is returned as "Preference:Exchange"
+			String rData = getRData(dnsBuffer, qTypeAnswer, answerCopy);
+			System.out.println("***Record " + i + "***");
+			
+			if (Integer.parseInt(qClassAnswer) != 1)
+				System.out.println("ERROR\t QCLASS value invalid. Expected 1, received " + qClassAnswer);
 		
-		
-		// print results
-		// did not create a separate method due to the amount of variables managed in this method
-		if (anCount != 0) {
-			System.out.println("***Answer section (" + anCount + " records)***");
-			for (int i = 0; i < anCount; i++) {
-				System.out.println("***Record " + i + "***");
-			
-				if (Integer.parseInt(qClassAnswer) != 1)
-					System.out.println("ERROR\t QCLASS value invalid. Expected 1, received " + qClassQuestion);
-			
-				String authStr;
-				if (AA == 1) authStr = "auth";
-				else if (AA == 0) authStr = "nonauth";
-				else authStr = "ERROR\t Could not resolve authoritative status: " + AA;
-				if (rCode == 0) {
-					// do nothing
-				} else if (rCode == 1) {
-					System.out.println("ERROR\t RCODE Format error: the name server was unable to interpret the query");
-				} else if (rCode == 2) {
-					System.out.println("ERROR\t RCODE Server failure: the server was unable to process this query due to a problem with the name server");
-				} else if (rCode == 3) {
-					System.out.println("ERROR\t RCODE Name error: the domain name does not exist");
-				} else if (rCode == 4) {
-					System.out.println("ERROR\t RCODE Unsupported error: the name server does not support this kind of query");
-				} else if (rCode == 5) {
-					System.out.println("ERROR\t RCODE Refused: the name server refuses to perform the requested operation");
-				}
-			
-				if (qTypeAnswer.equals(QType.type_A.toString())) {
-					System.out.format( "IP \t %s \t %d \t %s \n", rData, TTL, authStr);
-				} else if (qTypeAnswer.equals(QType.type_CNAME.toString())) {
-					System.out.format( "CNAME \t %s \t %d \t %s \n", rData, TTL, authStr);
-				} else if (qTypeAnswer.equals(QType.type_MX.toString())) {
-					String prefExch[] = rData.split("[:]");
-					System.out.format( "MX \t %s \t %s \t %d \t %s \n", prefExch[1], prefExch[0], TTL, authStr);
-				} else if (qTypeAnswer.equals(QType.type_NS.toString())) {
-					System.out.format( "NS \t %s \t %d \t %s \n", rData, TTL, authStr);
-				} else {
-					System.out.println("ERROR\t Could not identify query type: " + qTypeAnswer);
-				}
+			String authStr;
+			if (AA == 1) authStr = "auth";
+			else if (AA == 0) authStr = "nonauth";
+			else authStr = "ERROR\t Could not resolve authoritative status: " + AA;
+			if (rCode == 0) {
+				// do nothing
+			} else if (rCode == 1) {
+				System.out.println("ERROR\t RCODE Format error: the name server was unable to interpret the query");
+			} else if (rCode == 2) {
+				System.out.println("ERROR\t RCODE Server failure: the server was unable to process this query due to a problem with the name server");
+			} else if (rCode == 3) {
+				System.out.println("ERROR\t RCODE Name error: the domain name does not exist");
+			} else if (rCode == 4) {
+				System.out.println("ERROR\t RCODE Unsupported error: the name server does not support this kind of query");
+			} else if (rCode == 5) {
+				System.out.println("ERROR\t RCODE Refused: the name server refuses to perform the requested operation");
 			}
+		
+			if (qTypeAnswer.equals(QType.type_A.toString())) {
+				System.out.format( "IP \t %s \t %d \t %s \n", rData, TTL, authStr);
+			} else if (qTypeAnswer.equals(QType.type_CNAME.toString())) {
+				System.out.format( "CNAME \t %s \t %d \t %s \n", rData, TTL, authStr);
+			} else if (qTypeAnswer.equals(QType.type_MX.toString())) {
+				String prefExch[] = rData.split("[:]");
+				System.out.format( "MX \t %s \t %s \t %d \t %s \n", prefExch[1], prefExch[0], TTL, authStr);
+			} else if (qTypeAnswer.equals(QType.type_NS.toString())) {
+				System.out.format( "NS \t %s \t %d \t %s \n", rData, TTL, authStr);
+			} else {
+				System.out.println("ERROR\t Could not identify query type: " + qTypeAnswer);
+			}
+		
 		}
 		
-		if (nsCount != 0) {
-			System.out.println("***Additional section (" + arCount + " records)***");
-			
-			// TODO: parse additional section
+		//read authority no print
+		for(int i=0; i<anCount; i++) {
+			//Read answer record
+			String nameFieldAnswer = getRData(dnsBuffer, QType.type_CNAME.toString(), answerCopy);
+			//Qtype
+			dnsBuffer.get(currentBytes, 0, currentBytes.length);
+			String qTypeAnswer = bytesToStr(currentBytes);
+			//QClass
+			dnsBuffer.get(currentBytes, 0, currentBytes.length);
+			String qClassAnswer = bytesToStr(currentBytes);
+			//TTL
+			currentBytes = new byte[4];
+			dnsBuffer.get(currentBytes, 0, currentBytes.length);
+			long TTL = getIntFromBytes(currentBytes);
+			//RDLength
+			currentBytes = new byte[2];
+			dnsBuffer.get(currentBytes, 0, currentBytes.length);
+			long rdlLength = getIntFromBytes(currentBytes);
+			//RData (for MX type the rData is returned as "Preference:Exchange"
+			String rData = getRData(dnsBuffer, qTypeAnswer, answerCopy);
+		}
+		
+		//read additional
+		System.out.println("***Additional section (" + arCount + " records)***");
+		for(int i=0; i<arCount; i++) {
+			//Read answer record
+			String nameFieldAnswer = getRData(dnsBuffer, QType.type_CNAME.toString(), answerCopy);
+			//Qtype
+			dnsBuffer.get(currentBytes, 0, currentBytes.length);
+			String qTypeAnswer = bytesToStr(currentBytes);
+			//QClass
+			dnsBuffer.get(currentBytes, 0, currentBytes.length);
+			String qClassAnswer = bytesToStr(currentBytes);
+			//TTL
+			currentBytes = new byte[4];
+			dnsBuffer.get(currentBytes, 0, currentBytes.length);
+			long TTL = getIntFromBytes(currentBytes);
+			//RDLength
+			currentBytes = new byte[2];
+			dnsBuffer.get(currentBytes, 0, currentBytes.length);
+			long rdlLength = getIntFromBytes(currentBytes);
+			//RData (for MX type the rData is returned as "Preference:Exchange"
+			String rData = getRData(dnsBuffer, qTypeAnswer, answerCopy);
+			System.out.println("***Record " + i + "***");
+			if (Integer.parseInt(qClassAnswer) != 1)
+				System.out.println("ERROR\t QCLASS value invalid. Expected 1, received " + qClassAnswer);
+		
+			String authStr;
+			if (AA == 1) authStr = "auth";
+			else if (AA == 0) authStr = "nonauth";
+			else authStr = "ERROR\t Could not resolve authoritative status: " + AA;
+			if (rCode == 0) {
+				// do nothing
+			} else if (rCode == 1) {
+				System.out.println("ERROR\t RCODE Format error: the name server was unable to interpret the query");
+			} else if (rCode == 2) {
+				System.out.println("ERROR\t RCODE Server failure: the server was unable to process this query due to a problem with the name server");
+			} else if (rCode == 3) {
+				System.out.println("ERROR\t RCODE Name error: the domain name does not exist");
+			} else if (rCode == 4) {
+				System.out.println("ERROR\t RCODE Unsupported error: the name server does not support this kind of query");
+			} else if (rCode == 5) {
+				System.out.println("ERROR\t RCODE Refused: the name server refuses to perform the requested operation");
+			}
+		
+			if (qTypeAnswer.equals(QType.type_A.toString())) {
+				System.out.format( "IP \t %s \t %d \t %s \n", rData, TTL, authStr);
+			} else if (qTypeAnswer.equals(QType.type_CNAME.toString())) {
+				System.out.format( "CNAME \t %s \t %d \t %s \n", rData, TTL, authStr);
+			} else if (qTypeAnswer.equals(QType.type_MX.toString())) {
+				String prefExch[] = rData.split("[:]");
+				System.out.format( "MX \t %s \t %s \t %d \t %s \n", prefExch[1], prefExch[0], TTL, authStr);
+			} else if (qTypeAnswer.equals(QType.type_NS.toString())) {
+				System.out.format( "NS \t %s \t %d \t %s \n", rData, TTL, authStr);
+			} else {
+				System.out.println("ERROR\t Could not identify query type: " + qTypeAnswer);
+			}
+		
 		}
 		
 		if (anCount == 0 && nsCount == 0) System.out.println("NOTFOUND");
@@ -222,8 +292,8 @@ public class DnsManager {
 	private static String byteToLetter(byte b) {
 		byte letter[] = new byte[1];
 		letter[0] = b;
-		//Is a letter or number
-		if((b > 47 && b < 58) || (b > 96 && b < 123)) {
+		//Is a letter or number, -
+		if((b > 47 && b < 58) || (b > 96 && b < 123) || b == 45) {
 			return new String(letter);
 		} else {
 			return b+"";
@@ -235,8 +305,57 @@ public class DnsManager {
 	  return str.matches("-?\\d+(\\.\\d+)?");
 	}
 	
+	private static String pointer(byte[] currentBytes, byte[] answerCopy) {
+		//System.out.println((currentBytes[0] & 63));
+		String rData = "";
+		int offset = (currentBytes[0] & 63) * 256 + currentBytes[1];
+		byte b  = answerCopy[offset];
+		offset += 1;
+		//while not the 0 character
+		boolean firstChar = true;
+		while(b != ZERO && offset < answerCopy.length) {
+			String letter = byteToLetter(b);
+			if(isNumeric(letter) && !firstChar) {
+				letter = ".";
+			}
+			if(!firstChar) {
+				rData += letter;
+			}
+			firstChar = false;
+			b = answerCopy[offset];
+			offset += 1;
+		}
+		return rData;
+	}
+	
 	private static String getVariableName(ByteBuffer dnsBuffer, byte[] answerCopy) {
-		if(dnsBuffer.remaining()<2) {
+		byte[] firstByte = new byte[1];
+		dnsBuffer.get(firstByte, 0, 1);
+		String rData ="";
+		boolean firstChar = true;
+		while(firstByte[0] != 0) {
+			if(((firstByte[0] >> 6) & 3) == 3) {
+				byte nextByte[] = new byte[1];
+				dnsBuffer.get(nextByte, 0, 1);
+				byte pointer[] = {firstByte[0], nextByte[0]};
+				rData += pointer(pointer, answerCopy);
+				return rData;
+			}
+			String letter = byteToLetter(firstByte[0]);
+			if(isNumeric(letter) && !firstChar) {
+				letter = ".";
+			}
+			if(!firstChar) {
+				rData += letter;
+			}
+			firstChar = false;
+			dnsBuffer.get(firstByte, 0, 1);
+		}
+		return rData;
+		
+		
+		
+		/*if(dnsBuffer.remaining()<2) {
 			return "";
 		}
 		byte[] currentBytes = new byte[2];
@@ -244,29 +363,17 @@ public class DnsManager {
 		String rData = "";
 		//its a pointer
 		if(((currentBytes[0] >> 6) & 3) == 3) {
-			int offset = (currentBytes[0] & 63) * 256 + currentBytes[1];
-			byte b  = answerCopy[offset];
-			offset += 1;
-			//while not the 0 character
-			boolean firstChar = true;
-			while(b != ZERO && offset < answerCopy.length) {
-				String letter = byteToLetter(b);
-				if(isNumeric(letter) && !firstChar) {
-					firstChar = false;
-					letter = ".";
-				}
-				rData += letter;
-				b = answerCopy[offset];
-				offset += 1;
-			}
+			rData = pointer(currentBytes, answerCopy);
 		} else {
 			byte b = currentBytes[0];
 			boolean firstLetter = true;
+			boolean firstChar = true;
 			while(b != ZERO) {
 				String letter = byteToLetter(b);
-				if(isNumeric(letter)) {
+				if(isNumeric(letter) && !firstChar) {
 					letter = ".";
 				}
+				firstChar = false;
 				rData += letter;
 				if(!firstLetter) {
 					if(dnsBuffer.remaining() < 2) {
@@ -278,14 +385,18 @@ public class DnsManager {
 				} else {
 					b = currentBytes[1];
 				}
+				if(((b >> 6) & 3) == 3) {
+					rData += pointer(currentBytes, answerCopy);
+					return rData;
+				}
 				firstLetter = !firstLetter;
 			}
 			if(firstLetter) {
 				//Need to reread the last byte later
 				dnsBuffer.position(dnsBuffer.position()-1);
 			}
-		}
-		return rData;
+		}*/
+		//return rData;
 	}
 	
 	private static String getRData(ByteBuffer dnsBuffer, byte[] answerCopy) {
