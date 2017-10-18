@@ -90,6 +90,10 @@ public class DnsManager {
 		return bytes;
 	}
 	
+	public static void printOutput() {
+		
+	}
+	
 	public static void readDnsAnswer(byte[] answer){
 		ByteBuffer dnsBuffer = ByteBuffer.allocate(answer.length);
 		byte[] answerCopy = answer;
@@ -159,27 +163,43 @@ public class DnsManager {
 		// did not create a separate method due to the amount of variables managed in this method
 		if (anCount != 0) {
 			System.out.println("***Answer section (" + anCount + " records)***");
+			for (int i = 0; i < anCount; i++) {
+				System.out.println("***Record " + i + "***");
 			
-			if (Integer.parseInt(qClassAnswer) != 1)
-				System.out.println("ERROR\t QCLASS value invalid. Expected 1, received " + qClassQuestion);
+				if (Integer.parseInt(qClassAnswer) != 1)
+					System.out.println("ERROR\t QCLASS value invalid. Expected 1, received " + qClassQuestion);
 			
-			String authStr;
-			if (AA == 1) authStr = "auth";
-			else if (AA == 0) authStr = "nonauth";
-			else authStr = "ERROR\t Could not resolve authoritative status: " + AA;
+				String authStr;
+				if (AA == 1) authStr = "auth";
+				else if (AA == 0) authStr = "nonauth";
+				else authStr = "ERROR\t Could not resolve authoritative status: " + AA;
+				if (rCode == 0) {
+					// do nothing
+				} else if (rCode == 1) {
+					System.out.println("ERROR\t RCODE Format error: the name server was unable to interpret the query");
+				} else if (rCode == 2) {
+					System.out.println("ERROR\t RCODE Server failure: the server was unable to process this query due to a problem with the name server");
+				} else if (rCode == 3) {
+					System.out.println("ERROR\t RCODE Name error: the domain name does not exist");
+				} else if (rCode == 4) {
+					System.out.println("ERROR\t RCODE Unsupported error: the name server does not support this kind of query");
+				} else if (rCode == 5) {
+					System.out.println("ERROR\t RCODE Refused: the name server refuses to perform the requested operation");
+				}
 			
-			if (qTypeAnswer.equals(QType.type_A.toString())) {
-				System.out.format( "IP \t %s \t %d \t %s \n", rData, TTL, authStr);
-			} else if (qTypeAnswer.equals(QType.type_CNAME.toString())) {
-				System.out.format( "CNAME \t %s \t %d \t %s \n", rData, TTL, authStr);
-			} else if (qTypeAnswer.equals(QType.type_MX.toString())) {
-				String prefExch[] = rData.split("[:]");
-				System.out.format( "MX \t %s \t %s \t %d \t %s \n", prefExch[1], prefExch[0], TTL, authStr);
-			} else if (qTypeAnswer.equals(QType.type_NS.toString())) {
-				System.out.format( "NS \t %s \t %d \t %s \n", rData, TTL, authStr);
-			} else {
-				System.out.println("ERROR\t Could not identify query type: " + qTypeAnswer);
-			}	
+				if (qTypeAnswer.equals(QType.type_A.toString())) {
+					System.out.format( "IP \t %s \t %d \t %s \n", rData, TTL, authStr);
+				} else if (qTypeAnswer.equals(QType.type_CNAME.toString())) {
+					System.out.format( "CNAME \t %s \t %d \t %s \n", rData, TTL, authStr);
+				} else if (qTypeAnswer.equals(QType.type_MX.toString())) {
+					String prefExch[] = rData.split("[:]");
+					System.out.format( "MX \t %s \t %s \t %d \t %s \n", prefExch[1], prefExch[0], TTL, authStr);
+				} else if (qTypeAnswer.equals(QType.type_NS.toString())) {
+					System.out.format( "NS \t %s \t %d \t %s \n", rData, TTL, authStr);
+				} else {
+					System.out.println("ERROR\t Could not identify query type: " + qTypeAnswer);
+				}
+			}
 		}
 		
 		if (nsCount != 0) {
@@ -281,7 +301,7 @@ public class DnsManager {
 			currentBytes = new byte[4];
 			dnsBuffer.get(currentBytes, 0, currentBytes.length);
 			rData = bytesToStrIP(currentBytes);
-			rData = rData.replaceAll("(.{4})", "$1.");
+			//rData = rData.replaceAll("(.{4})", "$1.");
 			//remove last period
 			rData = rData.substring(0, rData.length()-1);
 		} else if(qType.equals(QType.type_CNAME.toString()) || qType.equals(QType.type_NS.toString())){
