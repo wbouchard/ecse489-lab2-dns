@@ -1,6 +1,3 @@
-import java.nio.ByteBuffer;
-import java.util.ArrayList;
-
 import org.apache.commons.cli.*;
 
 public class Main {
@@ -23,8 +20,8 @@ public class Main {
             return;
         }
         String timeout = cmd.getOptionValue("timeout", "5");
-        String maxRetries = cmd.getOptionValue("max-retries", "3");
-        String port = cmd.getOptionValue("port", "3");
+        String max_retries = cmd.getOptionValue("max-retries", "3");
+        String port = cmd.getOptionValue("port", "53");
         boolean mailServer = cmd.hasOption("mailServer");
         boolean nameServer = cmd.hasOption("nameServer");
         String[] leftoverArgs = cmd.getArgs();
@@ -34,13 +31,21 @@ public class Main {
             return;
         }
         String server = leftoverArgs[0];
+        // remove @ before the ip address given in command line args
+        server = server.substring(1); 
         String name = leftoverArgs[1];
         
         //Parse binary string
-        String dnsResponse = "1000001001111010100000010000000000000000000000010000000000000001000000000000000000000000000000000000001101110111011101110111011100000110011011010110001101100111011010010110110001101100000000100110001101100001000000000000000000000001000000000000000111000000000011000000000000000001000000000000000100000000000000000000010000010011000000000000010010000100110110001011000110100000";
+        /*String dnsResponse = "1000001001111010100000010000000000000000000000010000000000000001000000000000000000000000000000000000001101110111011101110111011100000110011011010110001101100111011010010110110001101100000000100110001101100001000000000000000000000001000000000000000111000000000011000000000000000001000000000000000100000000000000000000010000010011000000000000010010000100110110001011000110100000";
         byte[] response = DnsManager.getBytesBinaryStr(dnsResponse, dnsResponse.length());
         
-        DnsManager.readDnsAnswer(response);
+        DnsManager.readDnsAnswer(response);*/
+        /*for(int i=0; i<b.length; i++){
+    	String s1 = String.format("%8s", Integer.toBinaryString(b[i] & 0xFF)).replace(' ', '0');
+    	System.out.println(s1);
+    	}*/
+        //System.out.print(timeout + " " + nameServer + " " + mailServer + " " + server + " " + name);
+        
         
         //Print request
         System.out.println(String.format("DnsClient sending request for %s", name));
@@ -51,13 +56,9 @@ public class Main {
         }
         System.out.println(String.format("Request type: %s", requestType));
         
-        byte[] dnsQuestion = DnsManager.getDnsQuestion(name, mailServer, nameServer);
-        /*for(int i=0; i<b.length; i++){
-        	String s1 = String.format("%8s", Integer.toBinaryString(b[i] & 0xFF)).replace(' ', '0');
-        	System.out.println(s1);
-        }*/
-        //System.out.print(timeout + " " + nameServer + " " + mailServer + " " + server + " " + name);
-	
+        UDPClientSocket cs = new UDPClientSocket(Integer.parseInt(timeout), Integer.parseInt(max_retries), 
+        		Integer.parseInt(port), server, name, mailServer, nameServer);
+        cs.sendDnsRequest();
 	}
 	
 	private static Options getOptions(){

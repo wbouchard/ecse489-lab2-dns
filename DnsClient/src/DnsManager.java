@@ -117,6 +117,7 @@ public class DnsManager {
 		//ANCOUNT
 		dnsBuffer.get(currentBytes, 0, currentBytes.length);
 		long anCount = getIntFromBytes(currentBytes);
+		
 		//NSCOUNT
 		dnsBuffer.get(currentBytes, 0, currentBytes.length);
 		long nsCount = getIntFromBytes(currentBytes);
@@ -152,6 +153,42 @@ public class DnsManager {
 		long rdlLength = getIntFromBytes(currentBytes);
 		//RData (for MX type the rData is returned as "Preference:Exchange"
 		String rData = getRData(dnsBuffer, qTypeAnswer, answerCopy);
+		
+		
+		// print results
+		// did not create a separate method due to the amount of variables managed in this method
+		if (anCount != 0) {
+			System.out.println("***Answer section (" + anCount + " records)***");
+			
+			if (Integer.parseInt(qClassAnswer) != 1)
+				System.out.println("ERROR\t QCLASS value invalid. Expected 1, received " + qClassQuestion);
+			
+			String authStr;
+			if (AA == 1) authStr = "auth";
+			else if (AA == 0) authStr = "nonauth";
+			else authStr = "ERROR\t Could not resolve authoritative status: " + AA;
+			
+			if (qTypeAnswer.equals(QType.type_A.toString())) {
+				System.out.format( "IP \t %s \t %d \t %s \n", rData, TTL, authStr);
+			} else if (qTypeAnswer.equals(QType.type_CNAME.toString())) {
+				System.out.format( "CNAME \t %s \t %d \t %s \n", rData, TTL, authStr);
+			} else if (qTypeAnswer.equals(QType.type_MX.toString())) {
+				String prefExch[] = rData.split("[:]");
+				System.out.format( "MX \t %s \t %s \t %d \t %s \n", prefExch[1], prefExch[0], TTL, authStr);
+			} else if (qTypeAnswer.equals(QType.type_NS.toString())) {
+				System.out.format( "NS \t %s \t %d \t %s \n", rData, TTL, authStr);
+			} else {
+				System.out.println("ERROR\t Could not identify query type: " + qTypeAnswer);
+			}	
+		}
+		
+		if (nsCount != 0) {
+			System.out.println("***Additional section (" + arCount + " records)***");
+			
+			// TODO: parse additional section
+		}
+		
+		if (anCount == 0 && nsCount == 0) System.out.println("NOTFOUND");
 	}
 	
 	public static long getIntFromBytes(byte[] b){
@@ -254,7 +291,10 @@ public class DnsManager {
 			dnsBuffer.get(currentBytes, 0, currentBytes.length);
 			long preference = getIntFromBytes(currentBytes);
 			//get QNAME
-			rData = String.format("%l:%s", preference, getVariableName(dnsBuffer, answerCopy));
+			// for mail server, return rData as Preference:Alias
+			rData += String.valueOf(preference);
+			rData += ":";
+			rData += getVariableName(dnsBuffer, answerCopy);
 		}
 		return rData;
 	}
