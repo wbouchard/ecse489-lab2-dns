@@ -47,6 +47,9 @@ public class UDPClientSocket {
 		        byte[] dns_request = DnsManager.getDnsQuestion(name, mailServer, nameServer);
 				sendData = dns_request;
 				byte[] ipAddr = convertIpAddrToByteArray(server);
+				if(ipAddr == null) {
+					return;
+				}
 				InetAddress server_ina = InetAddress.getByAddress(ipAddr);
 				DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, server_ina, port);
 				
@@ -84,14 +87,18 @@ public class UDPClientSocket {
 	
 	// separate an IP address into 4 tokens, and convert those to a byte representation
 	public static byte[] convertIpAddrToByteArray(String ipAddr) {
-		String[] tokens = ipAddr.split("[.]");
-		byte[] byteaddr = new byte[4];
-		for (int i = 0; i < 4; i++) {
-			byteaddr[i] = (byte)Integer.parseInt(tokens[i]);
-			
-			// move byte back to int to test conversion
-			//System.out.println(i + " : " + Byte.toUnsignedInt(byteaddr[i]));
-		}
+		byte[] byteaddr = null;
+			String[] tokens = ipAddr.split("[.]");
+			if(tokens.length != 4) {
+				System.out.println("The specified DNS ip does not have a correct format: X.X.X.X");
+				return byteaddr;
+			}
+			byteaddr = new byte[4];
+			for (int i = 0; i < byteaddr.length; i++) {
+				byteaddr[i] = (byte)Integer.parseInt(tokens[i]);
+				// move byte back to int to test conversion
+				//System.out.println(i + " : " + Byte.toUnsignedInt(byteaddr[i]));
+			}
 		return byteaddr;
 	}
 }
