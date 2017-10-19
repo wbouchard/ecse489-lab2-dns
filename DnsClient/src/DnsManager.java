@@ -306,22 +306,25 @@ public class DnsManager {
 	  return str.matches("-?\\d+(\\.\\d+)?");
 	}
 	
-	private static String pointer(byte[] currentBytes, byte[] answerCopy, boolean strOnlyPtr) {
+	private static String pointer(int offset, byte[] answerCopy, boolean strOnlyPtr) {
 		//System.out.println((currentBytes[0] & 63));
 		String rData = "";
 		if(!strOnlyPtr) {
 			rData = ".";
 		}
-		int offset = (currentBytes[0] & 63) * 256 + currentBytes[1];
+		//int offset = (currentBytes[0] & 63) * 256 + currentBytes[1];
 		byte b  = answerCopy[offset];
 		offset += 1;
 		//while not the 0 character
 		boolean firstChar = true;
 		while(b != ZERO && offset < answerCopy.length) {
-			/*if(((b >> 6) & 3) == 3) {
-				byte[] bs = {b, answerCopy[offset]};
-				rData += pointer(bs, answerCopy, false);
-			}*/
+			if(((b >> 6) & 3) == 3) {
+				byte nextByte[] = new byte[1];
+				nextByte[0] = answerCopy[offset];
+				int newOffset = (b & 63) * 256 + nextByte[0];
+				rData += pointer(newOffset, answerCopy, false);
+				return rData;
+			}
 			rData += byteToLetter(b, firstChar);
 			firstChar = false;
 			b = answerCopy[offset];
@@ -339,8 +342,9 @@ public class DnsManager {
 			if(((firstByte[0] >> 6) & 3) == 3) {
 				byte nextByte[] = new byte[1];
 				dnsBuffer.get(nextByte, 0, 1);
-				byte pointer[] = {firstByte[0], nextByte[0]};
-				rData += pointer(pointer, answerCopy, rData.isEmpty());
+				int offset = (firstByte[0] & 63) * 256 + nextByte[0];
+				//byte pointer[] = {firstByte[0], nextByte[0]};
+				rData += pointer(offset, answerCopy, rData.isEmpty());
 				return rData;
 			}
 			rData += byteToLetter(firstByte[0], firstChar);
