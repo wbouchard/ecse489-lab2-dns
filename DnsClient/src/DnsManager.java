@@ -199,6 +199,7 @@ public class DnsManager {
 		}
 		
 		//read authority no print
+		System.out.println("***Authoritative section (" + nsCount + " records)***");
 		for(int i=0; i<nsCount; i++) {
 			//Read answer record
 			String nameFieldAnswer = getRData(dnsBuffer, QType.type_CNAME.toString(), answerCopy);
@@ -505,16 +506,25 @@ public class DnsManager {
 	}
 	
 	public static byte[] getQnameBytes(String domain){
-		domain = convertDomain(domain);
-		byte Qname[] = new byte[domain.length()+1];
+		String domainWithLengths = convertDomain(domain);
+		int counter = 0;
+		byte Qname[] = new byte[domainWithLengths.length()+1];
 		for(int i=0; i<domain.length(); i++){
 			char letter = domain.charAt(i);
-			if(isNumeric(letter+"")) {
+			if(letter == '.') {
+				Qname[i-counter] = (byte) counter;
+				counter = 0;
+			} else {
+				Qname[i+1] = (byte) letter;
+				counter++;
+			}
+			/*if(isNumeric(letter+"")) {
 				Qname[i] = (byte) Integer.parseInt(letter+"");
 			} else {
 				Qname[i] = (byte) domain.charAt(i);
-			}
+			}*/
 		}
+		Qname[(domainWithLengths.length() - 1) - counter] = (byte) counter;
 		//Signal end of domain
 		Qname[Qname.length-1] = 0;
 		return Qname;
