@@ -30,25 +30,89 @@ public class DnsClient {
         	System.exit(1);
             return;
         }
+        
+        // input argument parsing and error handling
+        int t = 0;
+        int mr = 0;
+        int p = 0;
+        try {
+        	t = Integer.parseInt(timeout);
+        } catch (NumberFormatException e) {
+        	System.out.println("ERROR\t Invalid argument for timeout; please enter an integer.");
+        	System.out.println("Required command format: \"java DnsClient [-t timeout] [-r max-retries] [-p port] [-mx|-ns] @server name\"");
+        	System.exit(1);
+        	return;
+        }
+        try {
+        	mr = Integer.parseInt(max_retries);
+        } catch (NumberFormatException e) {
+        	System.out.println("ERROR\t Invalid argument for max retries; please enter an integer.");
+        	System.out.println("Required command format: \"java DnsClient [-t timeout] [-r max-retries] [-p port] [-mx|-ns] @server name\"");
+        	System.exit(1);
+        	return;
+        }
+        try {
+        	p = Integer.parseInt(port);
+        	if (p != 53)
+        		System.out.println("WARNING\t ** Consider using port 53, the official port for DNS requests.");
+        } catch (NumberFormatException e) {
+        	System.out.println("ERROR\t Invalid argument for port number; please enter an integer.");
+        	System.out.println("Required command format: \"java DnsClient [-t timeout] [-r max-retries] [-p port] [-mx|-ns] @server name\"");
+        	System.exit(1);
+        	return;
+        }
+        
         String server = leftoverArgs[0];
-        // remove @ before the ip address given in command line args
-        server = server.substring(1); 
+        if (server.charAt(0) != '@') {
+        	System.out.println("ERROR\t Invalid argument for IP address; please add @ to the beginning of the IP address.");
+        	System.out.println("Required command format: \"java DnsClient [-t timeout] [-r max-retries] [-p port] [-mx|-ns] @server name\"");
+        	System.exit(1);
+        	return;
+        }
+        server = server.substring(1); // remove @ before the ip address given in command line args
+        
+        // tokenize given IP address for error handling
+        String[] tokens = server.split("[.]");
+        boolean invalid = false;
+        if (tokens.length > 4)
+        	invalid = true;
+        else {
+        	for (int i = 0; i < tokens.length; i++) {
+        		try {
+            		if (Integer.parseInt(tokens[i]) > 255) {
+            			invalid = true;
+            			break;
+            		}
+        		} catch (NumberFormatException e) {
+        			invalid = true;
+        		}
+        	}
+        }
+		if(invalid == true) {
+			System.out.println("ERROR\t Invalid argument for IP address; please follow the IPV4 format @XXX.XXX.XXX.XXX, where each XXX value is less than 256.");
+			System.out.println("Required command format: \"java DnsClient [-t timeout] [-r max-retries] [-p port] [-mx|-ns] @server name\"");
+			System.exit(1);
+			return;
+		}
+        
         String name = leftoverArgs[1];
+        if (name.indexOf('.') == -1) {
+        	System.out.println("ERROR\t Invalid argument for queried name; please ensure that there is a period (.) in your address.");
+        	System.out.println("Required command format: \"java DnsClient [-t timeout] [-r max-retries] [-p port] [-mx|-ns] @server name\"");
+        	System.exit(1);
+        	return;
+        }
         
-        /**************************/
-        //wikipedia -ns is GUT
-        
-        //Print request
+        //Print initial output using arguments
         System.out.println(String.format("DnsClient sending request for %s", name));
-        System.out.println(String.format("Server: %s", server));
+        System.out.println(String.format("Server: %s:%d", server, p));
         String requestType = "A";
         if(mailServer || nameServer){
         	requestType = mailServer ? "MX" : "NS";
         }
         System.out.println(String.format("Request type: %s", requestType));
         
-        UDPClientSocket cs = new UDPClientSocket(Integer.parseInt(timeout), Integer.parseInt(max_retries), 
-        		Integer.parseInt(port), server, name, mailServer, nameServer);
+        UDPClientSocket cs = new UDPClientSocket(t, mr, p, server, name, mailServer, nameServer);
         cs.sendDnsRequest();
 	}
 	

@@ -12,8 +12,6 @@ public class DnsManager {
 	private static final int FF = 255;
 	private static final int FFFF = 65535;
 	private static final int ZERO = 0;
-	final static String FULL = "+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+" + System.lineSeparator();
-	final static String HALF = System.lineSeparator() + "+--+--+--+--+--+--+--+--+"+System.lineSeparator();
 	private static final int BYTE_SIZE = 8;
 	
 	private enum QClass{
@@ -73,7 +71,7 @@ public class DnsManager {
 		b[byteIndex] = (byte) (b[byteIndex] & ~(1 << index));
 	}
 	
-	public static String bytesToStr(byte[] bs){
+	public static String bytesToStr(byte[] bs) {
 		String bytes = "";
 		for(byte b : bs){
 			bytes += String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0');
@@ -90,16 +88,13 @@ public class DnsManager {
 		return bytes;
 	}
 	
-	public static void printOutput() {
-		
-	}
-	
 	public static void readDnsAnswer(byte[] answer){
 		ByteBuffer dnsBuffer = ByteBuffer.allocate(answer.length);
 		byte[] answerCopy = answer;
 		dnsBuffer.put(answer);
 		//stop writing, now read header
 		dnsBuffer.flip();
+		// read two bytes at a time
 		byte[] currentBytes = new byte[2];
 		dnsBuffer.get(currentBytes, 0, currentBytes.length);
 		//ID
@@ -139,7 +134,8 @@ public class DnsManager {
 		dnsBuffer.get(currentBytes, 0, currentBytes.length);
 		String qClassQuestion = bytesToStr(currentBytes);
 		
-		//Read answer record
+		// Read + print answer records
+		// not included in its own method since it uses the many strings read above
 		System.out.println("***Answer section (" + anCount + " records)***");
 		for(int i=0; i<anCount; i++) {
 			//Read answer record
@@ -188,7 +184,7 @@ public class DnsManager {
 			} else if (qTypeAnswer.equals(QType.type_CNAME.toString())) {
 				System.out.format( "CNAME \t %s \t %d \t %s \n", rData, TTL, authStr);
 			} else if (qTypeAnswer.equals(QType.type_MX.toString())) {
-				String prefExch[] = rData.split("[:]");
+				String prefExch[] = rData.split("[:]"); // format: Preference:Alias (see method getRData)
 				System.out.format( "MX \t %s \t %s \t %d \t %s \n", prefExch[1], prefExch[0], TTL, authStr);
 			} else if (qTypeAnswer.equals(QType.type_NS.toString())) {
 				System.out.format( "NS \t %s \t %d \t %s \n", rData, TTL, authStr);
@@ -198,7 +194,8 @@ public class DnsManager {
 		
 		}
 		
-		//read authority no print
+		// Read authority, do not print; only serves to advance currentBytes index for Authority records
+		// handling these responses is not required by the lab
 		System.out.println("***Authoritative section (" + nsCount + " records)***");
 		for(int i=0; i<nsCount; i++) {
 			//Read answer record
@@ -221,7 +218,7 @@ public class DnsManager {
 			String rData = getRData(dnsBuffer, qTypeAnswer, answerCopy);
 		}
 		
-		//read additional
+		// Read + print additional records
 		System.out.println("***Additional section (" + arCount + " records)***");
 		for(int i=0; i<arCount; i++) {
 			//Read answer record
@@ -279,10 +276,11 @@ public class DnsManager {
 		
 		}
 		
+		// if there are no Answer records and no Authoritative records: could not find requested name
 		if (anCount == 0 && nsCount == 0) System.out.println("NOTFOUND");
 	}
 	
-	public static long getIntFromBytes(byte[] b){
+	public static long getIntFromBytes(byte[] b) {
 		long unsignedInt = 0;
 	    for (int i = 0; i < b.length; i++) {
 	    		unsignedInt += b[i] << 8 * (b.length - 1 - i);
@@ -293,10 +291,12 @@ public class DnsManager {
 	private static String byteToLetter(byte b, boolean firstChar) {
 		byte letter[] = new byte[1];
 		letter[0] = b;
-		//Is a letter or number, -
+		// is a letter, number, or dash character
 		if((b > 47 && b < 58) || (b > 96 && b < 123) || b == 45) {
 			return new String(letter);
 		} else if(b>0 && b<10 && !firstChar){
+			// is a literal number, used to indicate the length of the following segment in the dns query
+			// replace by a dot
 			return ".";
 		}
 		return "";
@@ -307,15 +307,19 @@ public class DnsManager {
 	  return str.matches("-?\\d+(\\.\\d+)?");
 	}
 	
-	private static String pointer(int offset, byte[] answerCopy, boolean strOnlyPtr) {
+	
+	// recursively follows pointers in the DNS data. 
+	// if a byte starts with 11, we have a pointer -> read the next byte to get 14-bit offset
+	private static String followPointer(int offset, byte[] answerCopy, boolean rDataIsEmpty) {
 		//System.out.println((currentBytes[0] & 63));
 		String rData = "";
-		if(!strOnlyPtr) {
+		// ensure that a . is displayed when pointers link two names together (eg. cim.moodle + mcgill.ca)
+		if(!rDataIsEmpty) {
 			rData = ".";
 		}
-		//int offset = (currentBytes[0] & 63) * 256 + currentBytes[1];
 		byte b  = answerCopy[offset];
 		offset += 1;
+		
 		//while not the 0 character
 		boolean firstChar = true;
 		while(b != ZERO && offset < answerCopy.length) {
@@ -323,7 +327,7 @@ public class DnsManager {
 				byte nextByte[] = new byte[1];
 				nextByte[0] = answerCopy[offset];
 				int newOffset = (b & 63) * 256 + nextByte[0];
-				rData += pointer(newOffset, answerCopy, false);
+				rData += followPointer(newOffset, answerCopy, false);
 				return rData;
 			}
 			rData += byteToLetter(b, firstChar);
@@ -334,6 +338,8 @@ public class DnsManager {
 		return rData;
 	}
 	
+	// read the value at a pointer; stops when the literal 0 is reached.
+	// able to follow pointers recursively
 	private static String getVariableName(ByteBuffer dnsBuffer, byte[] answerCopy) {
 		byte[] firstByte = new byte[1];
 		dnsBuffer.get(firstByte, 0, 1);
@@ -345,7 +351,7 @@ public class DnsManager {
 				dnsBuffer.get(nextByte, 0, 1);
 				int offset = (firstByte[0] & 63) * 256 + nextByte[0];
 				//byte pointer[] = {firstByte[0], nextByte[0]};
-				rData += pointer(offset, answerCopy, rData.isEmpty());
+				rData += followPointer(offset, answerCopy, rData.isEmpty());
 				return rData;
 			}
 			rData += byteToLetter(firstByte[0], firstChar);
@@ -353,59 +359,14 @@ public class DnsManager {
 			dnsBuffer.get(firstByte, 0, 1);
 		}
 		return rData;
-		
-		
-		
-		/*if(dnsBuffer.remaining()<2) {
-			return "";
-		}
-		byte[] currentBytes = new byte[2];
-		dnsBuffer.get(currentBytes, 0, currentBytes.length);
-		String rData = "";
-		//its a pointer
-		if(((currentBytes[0] >> 6) & 3) == 3) {
-			rData = pointer(currentBytes, answerCopy);
-		} else {
-			byte b = currentBytes[0];
-			boolean firstLetter = true;
-			boolean firstChar = true;
-			while(b != ZERO) {
-				String letter = byteToLetter(b);
-				if(isNumeric(letter) && !firstChar) {
-					letter = ".";
-				}
-				firstChar = false;
-				rData += letter;
-				if(!firstLetter) {
-					if(dnsBuffer.remaining() < 2) {
-						return rData;
-					} else {
-						dnsBuffer.get(currentBytes, 0, currentBytes.length);
-					}
-					b = currentBytes[0];
-				} else {
-					b = currentBytes[1];
-				}
-				if(((b >> 6) & 3) == 3) {
-					rData += pointer(currentBytes, answerCopy);
-					return rData;
-				}
-				firstLetter = !firstLetter;
-			}
-			if(firstLetter) {
-				//Need to reread the last byte later
-				dnsBuffer.position(dnsBuffer.position()-1);
-			}
-		}*/
-		//return rData;
 	}
 	
+	// use CNAME as default type if none is given
 	private static String getRData(ByteBuffer dnsBuffer, byte[] answerCopy) {
-		//Default name matching follows the one used for CNAME
 		return getRData(dnsBuffer, QType.type_CNAME.toString(), answerCopy);
-		
 	}
 	
+	// parse RData according to the type of query
 	private static String getRData(ByteBuffer dnsBuffer, String qType, byte[] answerCopy) {
 		byte[] currentBytes = new byte[2];
 		String rData = "";
@@ -413,9 +374,6 @@ public class DnsManager {
 			currentBytes = new byte[4];
 			dnsBuffer.get(currentBytes, 0, currentBytes.length);
 			rData = bytesToStrIP(currentBytes);
-			//rData = rData.replaceAll("(.{4})", "$1.");
-			//remove last period
-			//rData = rData.substring(0, rData.length());
 		} else if(qType.equals(QType.type_CNAME.toString()) || qType.equals(QType.type_NS.toString())){
 			rData = getVariableName(dnsBuffer, answerCopy);
 		} else if(qType.equals(QType.type_MX.toString())){
@@ -431,7 +389,8 @@ public class DnsManager {
 		return rData;
 	}
 
-	public static byte[] getDnsQuestion(String domain, boolean mailServer, boolean nameServer){
+	// create a DNS query following the guidelines in dnsprimer
+	public static byte[] createDnsQuery(String domain, boolean mailServer, boolean nameServer){
 		ByteBuffer dnsBuffer = ByteBuffer.allocate(1024);
 		dnsBuffer.clear();
 		int currentByteCount = 15;
