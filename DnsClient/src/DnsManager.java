@@ -477,11 +477,6 @@ public class DnsManager {
 				Qname[i+1] = (byte) letter;
 				counter++;
 			}
-			/*if(isNumeric(letter+"")) {
-				Qname[i] = (byte) Integer.parseInt(letter+"");
-			} else {
-				Qname[i] = (byte) domain.charAt(i);
-			}*/
 		}
 		Qname[(domainWithLengths.length() - 1) - counter] = (byte) counter;
 		//Signal end of domain
