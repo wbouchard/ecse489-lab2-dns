@@ -35,7 +35,7 @@ public class UDPClientSocket {
 			int retries = 0;
 			boolean receivedResponse = false;
 			
-			// wait on receive for this amount of time. throws exception if nothing was received.
+			// wait on receive for this amount of time. socket throws exception if nothing was received.
 			clientsocket.setSoTimeout(timeout * 1000);
 			
 			// used to calculate time it took to receive an answer (uses JVM time)
@@ -44,7 +44,7 @@ public class UDPClientSocket {
 			// limit number of times the while loop is entered according to max_retries arg
 			while (retries < max_retries && !receivedResponse) {
 				// generate new dns request each time to create a new random ID
-		        byte[] dns_request = DnsManager.getDnsQuestion(name, mailServer, nameServer);
+		        byte[] dns_request = DnsManager.createDnsQuery(name, mailServer, nameServer);
 				sendData = dns_request;
 				byte[] ipAddr = convertIpAddrToByteArray(server);
 				if(ipAddr == null) {
@@ -89,13 +89,10 @@ public class UDPClientSocket {
 	public static byte[] convertIpAddrToByteArray(String ipAddr) {
 		byte[] byteaddr = null;
 			String[] tokens = ipAddr.split("[.]");
-			if(tokens.length != 4) {
-				System.out.println("The specified DNS ip does not have a correct format: X.X.X.X");
-				return byteaddr;
-			}
 			byteaddr = new byte[4];
 			for (int i = 0; i < byteaddr.length; i++) {
 				byteaddr[i] = (byte)Integer.parseInt(tokens[i]);
+				
 				// move byte back to int to test conversion
 				//System.out.println(i + " : " + Byte.toUnsignedInt(byteaddr[i]));
 			}
