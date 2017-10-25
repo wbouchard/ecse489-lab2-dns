@@ -44,12 +44,8 @@ public class UDPClientSocket {
 			// limit number of times the while loop is entered according to max_retries arg
 			while (retries < max_retries && !receivedResponse) {
 				// generate new dns request each time to create a new random ID
-		        byte[] dns_request = DnsManager.createDnsQuery(name, mailServer, nameServer);
-				sendData = dns_request;
+		        sendData = DnsManager.createDnsQuery(name, mailServer, nameServer);
 				byte[] ipAddr = convertIpAddrToByteArray(server);
-				if(ipAddr == null) {
-					return;
-				}
 				InetAddress server_ina = InetAddress.getByAddress(ipAddr);
 				DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, server_ina, port);
 				

@@ -61,7 +61,14 @@ public class DnsClient {
         	System.exit(1);
         	return;
         }
-        
+        if (t < 0 || mr < 0 || p < 0) {
+        	System.out.println("ERROR\t Please enter positive integer values for the timeout, max retries, and/or port number.");
+        	System.out.println("Required command format: \"java DnsClient [-t timeout] [-r max-retries] [-p port] [-mx|-ns] @server name\"");
+        	System.exit(1);
+        	return;
+        }
+
+
         String server = leftoverArgs[0];
         if (server.charAt(0) != '@') {
         	System.out.println("ERROR\t Invalid argument for IP address; please add @ to the beginning of the IP address.");
@@ -74,12 +81,12 @@ public class DnsClient {
         // tokenize given IP address for error handling
         String[] tokens = server.split("[.]");
         boolean invalid = false;
-        if (tokens.length > 4)
+        if (tokens.length != 4)
         	invalid = true;
         else {
         	for (int i = 0; i < tokens.length; i++) {
         		try {
-            		if (Integer.parseInt(tokens[i]) > 255) {
+            		if (Integer.parseInt(tokens[i]) > 255 || Integer.parseInt(tokens[i]) < 0) {
             			invalid = true;
             			break;
             		}
@@ -89,7 +96,7 @@ public class DnsClient {
         	}
         }
 		if(invalid == true) {
-			System.out.println("ERROR\t Invalid argument for IP address; please follow the IPV4 format @XXX.XXX.XXX.XXX, where each XXX value is less than 256.");
+			System.out.println("ERROR\t Invalid argument for IP address; please follow the IPV4 format @XXX.XXX.XXX.XXX, where each XXX value is an integer 0 and 255.");
 			System.out.println("Required command format: \"java DnsClient [-t timeout] [-r max-retries] [-p port] [-mx|-ns] @server name\"");
 			System.exit(1);
 			return;
